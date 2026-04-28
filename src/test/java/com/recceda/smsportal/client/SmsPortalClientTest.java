@@ -1,29 +1,27 @@
 package com.recceda.smsportal.client;
 
-import com.recceda.smsportal.client.SmsPortalClient;
-import com.recceda.smsportal.client.SmsPortalException;
-import com.recceda.smsportal.model.BulkMessageResponse;
-import com.recceda.smsportal.model.SmsMessage;
-import org.junit.jupiter.api.Test;
-
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.api.Test;
+
+import com.recceda.smsportal.model.BulkMessageResponse;
+import com.recceda.smsportal.model.SmsMessage;
 
 class SmsPortalClientTest {
 
-    private static final String AUTH_JSON =
-            "{\"Token\":\"test-bearer-token\",\"Schema\":\"Bearer\"}";
-
     private static final String SEND_JSON =
-            "{\"Cost\":1,\"RemainingBalance\":499,\"EventId\":12345678901," +
-            "\"Sample\":\"Hello!\",\"Messages\":1,\"Parts\":1," +
-            "\"CostBreakDown\":[{\"Network\":\"Local\",\"Cost\":1,\"Quantity\":1}]," +
-            "\"ErrorReport\":{\"NoNetwork\":0,\"Duplicates\":0,\"OptedOuts\":0,\"Faults\":[]}}";
+            "{\"cost\":1,\"remainingBalance\":499,\"eventId\":12345678901," +
+            "\"sample\":\"Hello!\",\"messages\":1,\"parts\":1," +
+            "\"costBreakdown\":[{\"network\":\"Local\",\"cost\":1,\"quantity\":1}]," +
+            "\"errorReport\":{\"noNetwork\":0,\"duplicates\":0,\"optedOuts\":0,\"faults\":[]}}";
 
     /** Creates a fake {@link HttpResponse} with the given status code and body. */
     private static HttpResponse<String> fakeResponse(int status, String body) {
@@ -71,45 +69,44 @@ class SmsPortalClientTest {
     @Test
     void sendMessages_successfulResponse() throws Exception {
         StubClient client = new StubClient(
-                fakeResponse(200, AUTH_JSON),
                 fakeResponse(200, SEND_JSON)
         );
 
         BulkMessageResponse response = client.sendMessages(
-                List.of(new SmsMessage("27812345678", "Hello!")), true);
+            List.of(new SmsMessage("27812345678", "Hello!")));
 
         assertEquals(12345678901L, response.getEventId());
         assertEquals(1, response.getMessages());
         assertEquals(1.0, response.getCost());
         assertEquals(499.0, response.getRemainingBalance());
         assertNotNull(response.getErrorReport());
-        assertNotNull(response.getCostBreakDown());
-        assertEquals(1, response.getCostBreakDown().size());
-        assertEquals("Local", response.getCostBreakDown().get(0).getNetwork());
+        assertNotNull(response.getCostBreakdown());
+        assertEquals(1, response.getCostBreakdown().size());
+        assertEquals("Local", response.getCostBreakdown().get(0).getNetwork());
     }
 
     @Test
     void sendMessages_authFailure_throwsSmsPortalException() {
         StubClient client = new StubClient(
+            fakeResponse(401, "Unauthorized"),
                 fakeResponse(401, "Unauthorized")
         );
 
         SmsPortalException ex = assertThrows(SmsPortalException.class, () ->
-                client.sendMessages(List.of(new SmsMessage("27812345678", "Hello!")), true));
+            client.sendMessages(List.of(new SmsMessage("27812345678", "Hello!"))));
 
         assertEquals(401, ex.getHttpStatusCode());
-        assertTrue(ex.getMessage().contains("Authentication failed"));
+        assertTrue(ex.getMessage().contains("Unexpected response"));
     }
 
     @Test
     void sendMessages_apiError_throwsSmsPortalException() {
         StubClient client = new StubClient(
-                fakeResponse(200, AUTH_JSON),
                 fakeResponse(400, "Bad Request")
         );
 
         SmsPortalException ex = assertThrows(SmsPortalException.class, () ->
-                client.sendMessages(List.of(new SmsMessage("27812345678", "Hello!")), true));
+            client.sendMessages(List.of(new SmsMessage("27812345678", "Hello!"))));
 
         assertEquals(400, ex.getHttpStatusCode());
     }
@@ -118,14 +115,14 @@ class SmsPortalClientTest {
     void sendMessages_emptyList_throwsIllegalArgumentException() {
         StubClient client = new StubClient();
         assertThrows(IllegalArgumentException.class, () ->
-                client.sendMessages(List.of(), false));
+                client.sendMessages(List.of()));
     }
 
     @Test
     void sendMessages_nullList_throwsIllegalArgumentException() {
         StubClient client = new StubClient();
         assertThrows(IllegalArgumentException.class, () ->
-                client.sendMessages(null, false));
+                client.sendMessages(null));
     }
 
     @Test
@@ -143,33 +140,30 @@ class SmsPortalClientTest {
     @Test
     void getToken_cachedTokenReused() throws Exception {
         StubClient client = new StubClient(
-                fakeResponse(200, AUTH_JSON),
                 fakeResponse(200, SEND_JSON),
                 fakeResponse(200, SEND_JSON)
         );
 
-        client.sendMessages(List.of(new SmsMessage("27812345678", "Hello!")), true);
-        client.sendMessages(List.of(new SmsMessage("27812345679", "World!")), true);
+        client.sendMessages(List.of(new SmsMessage("27812345678", "Hello!")));
+        client.sendMessages(List.of(new SmsMessage("27812345679", "World!")));
 
-        // 1 auth + 2 sends = 3 total calls (token cached after first auth)
-        assertEquals(3, client.getCallCount());
+        // No auth call: only 2 send requests.
+        assertEquals(2, client.getCallCount());
     }
 
     @Test
     void sendMessages_tokenExpired_retriesOnce() throws Exception {
-        // Sequence: auth → 401 on send → re-auth → success send
+        // Sequence: 401 on send → success on retry
         StubClient client = new StubClient(
-                fakeResponse(200, AUTH_JSON),
                 fakeResponse(401, "Unauthorized"),
-                fakeResponse(200, AUTH_JSON),
                 fakeResponse(200, SEND_JSON)
         );
 
         BulkMessageResponse response = client.sendMessages(
-                List.of(new SmsMessage("27812345678", "Hello!")), true);
+            List.of(new SmsMessage("27812345678", "Hello!")));
 
         assertEquals(12345678901L, response.getEventId());
-        assertEquals(4, client.getCallCount());
+        assertEquals(2, client.getCallCount());
     }
 
     @Test
@@ -177,12 +171,9 @@ class SmsPortalClientTest {
         SmsMessage msg1 = new SmsMessage("27812345678", "Hello!");
         assertEquals("27812345678", msg1.getDestination());
         assertEquals("Hello!", msg1.getContent());
-        assertNull(msg1.getSender());
 
         SmsMessage msg2 = new SmsMessage("27812345678", "Hello!", "MyApp");
-        assertEquals("MyApp", msg2.getSender());
-
-        msg2.setSendTime("2026-05-01T10:00:00Z");
-        assertEquals("2026-05-01T10:00:00Z", msg2.getSendTime());
+        assertEquals("27812345678", msg2.getDestination());
+        assertEquals("Hello!", msg2.getContent());
     }
 }

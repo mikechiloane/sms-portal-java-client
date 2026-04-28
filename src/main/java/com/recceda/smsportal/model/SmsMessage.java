@@ -9,17 +9,12 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  */
 public class SmsMessage {
 
-    @JsonProperty("Destination")
+    @JsonProperty("destination")
     private String destination;
 
-    @JsonProperty("Content")
+    @JsonProperty("content")
     private String content;
 
-    @JsonProperty("Sender")
-    private String sender;
-
-    @JsonProperty("SendTime")
-    private String sendTime;
 
     public SmsMessage() {}
 
@@ -31,7 +26,6 @@ public class SmsMessage {
     public SmsMessage(String destination, String content, String sender) {
         this.destination = destination;
         this.content = content;
-        this.sender = sender;
     }
 
     public String getDestination() {
@@ -50,23 +44,4 @@ public class SmsMessage {
         this.content = content;
     }
 
-    public String getSender() {
-        return sender;
-    }
-
-    public void setSender(String sender) {
-        this.sender = sender;
-    }
-
-    /**
-     * Optional ISO 8601 datetime string for scheduled/delayed sends.
-     * Example: "2026-05-01T10:00:00Z"
-     */
-    public String getSendTime() {
-        return sendTime;
-    }
-
-    public void setSendTime(String sendTime) {
-        this.sendTime = sendTime;
-    }
 }

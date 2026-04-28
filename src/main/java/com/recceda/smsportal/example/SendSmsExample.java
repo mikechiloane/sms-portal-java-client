@@ -14,7 +14,7 @@ import com.recceda.smsportal.model.SmsMessage;
  * <pre>
  * export SMSPORTAL_CLIENT_ID=your-client-id
  * export SMSPORTAL_API_SECRET=your-api-secret
- * mvn exec:java -Dexec.mainClass="com.recceda.smsportal.example.smsportal.SendSmsExample"
+ * mvn exec:java -Dexec.mainClass="com.recceda.smsportal.example.SendSmsExample"
  * </pre>
  */
 public class SendSmsExample {
@@ -31,12 +31,11 @@ public class SendSmsExample {
         SmsPortalClient client = new SmsPortalClient(clientId, apiSecret);
 
         List<SmsMessage> messages = List.of(
-                new SmsMessage("27812345678", "Hello from SMSPortal Java client!", "MyApp")
+                new SmsMessage("0727388632", "Hello from SMSPortal Java client!", "MyApp")
         );
 
         try {
-            // Always use testMode = true first to validate without consuming credits
-            BulkMessageResponse response = client.sendMessages(messages, true);
+            BulkMessageResponse response = client.sendMessages(messages);
 
             System.out.println("EventId:          " + response.getEventId());
             System.out.println("Messages:         " + response.getMessages());
@@ -45,13 +44,14 @@ public class SendSmsExample {
             System.out.println("Remaining Balance:" + response.getRemainingBalance());
             System.out.println("Sample:           " + response.getSample());
 
-            if (response.getCostBreakDown() != null) {
-                response.getCostBreakDown().forEach(cb ->
+            if (response.getCostBreakdown() != null) {
+                response.getCostBreakdown().forEach(cb ->
                         System.out.printf("  Network: %s | Cost: %.2f | Qty: %d%n",
                                 cb.getNetwork(), cb.getCost(), cb.getQuantity()));
             }
 
         } catch (SmsPortalException e) {
+            e.printStackTrace();
             System.err.println("SMSPortal error (HTTP " + e.getHttpStatusCode() + "): " + e.getMessage());
             System.exit(1);
         }
