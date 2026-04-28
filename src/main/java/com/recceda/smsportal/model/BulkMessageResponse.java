@@ -1,36 +1,29 @@
 package com.recceda.smsportal.model;
 
-import java.util.List;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import java.util.List;
 
 /**
  * Response model for POST /v1/bulkmessages.
  */
+@JsonIgnoreProperties(ignoreUnknown=true)
 public class BulkMessageResponse {
 
-    @JsonProperty("Cost")
     private double cost;
 
-    @JsonProperty("RemainingBalance")
     private double remainingBalance;
 
-    @JsonProperty("EventId")
     private long eventId;
 
-    @JsonProperty("Sample")
     private String sample;
 
-    @JsonProperty("Messages")
     private int messages;
 
-    @JsonProperty("Parts")
     private int parts;
 
-    @JsonProperty("CostBreakDown")
-    private List<CostBreakDown> costBreakDown;
+    private List<CostBreakDown> costBreakdown;
 
-    @JsonProperty("ErrorReport")
     private ErrorReport errorReport;
 
     public BulkMessageResponse() {}
@@ -83,12 +76,12 @@ public class BulkMessageResponse {
         this.parts = parts;
     }
 
-    public List<CostBreakDown> getCostBreakDown() {
-        return costBreakDown;
+    public List<CostBreakDown> getCostBreakdown() {
+        return costBreakdown;
     }
 
-    public void setCostBreakDown(List<CostBreakDown> costBreakDown) {
-        this.costBreakDown = costBreakDown;
+    public void setCostBreakdown(List<CostBreakDown> costBreakdown) {
+        this.costBreakdown = costBreakdown;
     }
 
     public ErrorReport getErrorReport() {
@@ -101,13 +94,10 @@ public class BulkMessageResponse {
 
     public static class CostBreakDown {
 
-        @JsonProperty("Network")
         private String network;
 
-        @JsonProperty("Cost")
         private double cost;
 
-        @JsonProperty("Quantity")
         private int quantity;
 
         public CostBreakDown() {}
@@ -122,18 +112,15 @@ public class BulkMessageResponse {
         public void setQuantity(int quantity) { this.quantity = quantity; }
     }
 
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public static class ErrorReport {
 
-        @JsonProperty("NoNetwork")
         private int noNetwork;
 
-        @JsonProperty("Duplicates")
         private int duplicates;
 
-        @JsonProperty("OptedOuts")
         private int optedOuts;
 
-        @JsonProperty("Faults")
         private List<Object> faults;
 
         public ErrorReport() {}
